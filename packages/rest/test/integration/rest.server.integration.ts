@@ -3,7 +3,7 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
-import {Application, ApplicationConfig} from '@loopback/core';
+import {Application} from '@loopback/core';
 import {
   supertest,
   expect,
@@ -12,7 +12,13 @@ import {
   httpsGetAsync,
   givenHttpServerConfig,
 } from '@loopback/testlab';
-import {Route, RestBindings, RestServer, RestComponent} from '../..';
+import {
+  Route,
+  RestBindings,
+  RestServer,
+  RestComponent,
+  RestComponentConfig,
+} from '../..';
 import {IncomingMessage, ServerResponse} from 'http';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
@@ -120,7 +126,11 @@ describe('RestServer (integration)', () => {
   });
 
   it('exposes "GET /openapi.json" endpoint', async () => {
-    const server = await givenAServer({rest: {port: 0}});
+    const server = await givenAServer({
+      rest: {
+        port: 0,
+      },
+    });
     const greetSpec = {
       responses: {
         200: {
@@ -136,8 +146,11 @@ describe('RestServer (integration)', () => {
     );
     expect(response.body).to.containDeep({
       openapi: '3.0.0',
+      info: {
+        title: 'LoopBack Application',
+        version: '1.0.0',
+      },
       servers: [{url: '/'}],
-      info: {title: 'LoopBack Application', version: '1.0.0'},
       paths: {
         '/greet': {
           get: {
@@ -155,6 +168,112 @@ describe('RestServer (integration)', () => {
         },
       },
     });
+    expect(response.get('Access-Control-Allow-Origin')).to.equal('*');
+    expect(response.get('Access-Control-Allow-Credentials')).to.equal('true');
+  });
+
+  it('exposes "GET /openapi.json" endpoint with apiExplorer opts', async () => {
+    const server = await givenAServer({
+      rest: {
+        port: 0,
+        apiExplorer: {
+          openApiSpec: {
+            info: {
+              title: 'My Application',
+              version: '1.0.0',
+            },
+            servers: [{url: 'http://127.0.0.1:8080'}],
+          },
+        },
+      },
+    });
+    const greetSpec = {
+      responses: {
+        200: {
+          content: {'text/plain': {schema: {type: 'string'}}},
+          description: 'greeting of the day',
+        },
+      },
+    };
+    server.route(new Route('get', '/greet', greetSpec, function greet() {}));
+
+    const response = await createClientForHandler(server.requestHandler).get(
+      '/openapi.json',
+    );
+    expect(response.body).to.containDeep({
+      openapi: '3.0.0',
+      info: {
+        title: 'My Application',
+        version: '1.0.0',
+      },
+      servers: [{url: 'http://127.0.0.1:8080'}],
+      paths: {
+        '/greet': {
+          get: {
+            responses: {
+              '200': {
+                content: {
+                  'text/plain': {
+                    schema: {type: 'string'},
+                  },
+                },
+                description: 'greeting of the day',
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(response.get('Access-Control-Allow-Origin')).to.equal('*');
+    expect(response.get('Access-Control-Allow-Credentials')).to.equal('true');
+  });
+
+  it('exposes "GET /openapi.json" endpoint with setServersFromRequest', async () => {
+    const server = await givenAServer({
+      rest: {
+        port: 0,
+        apiExplorer: {
+          setServersFromRequest: true,
+        },
+      },
+    });
+    const greetSpec = {
+      responses: {
+        200: {
+          content: {'text/plain': {schema: {type: 'string'}}},
+          description: 'greeting of the day',
+        },
+      },
+    };
+    server.route(new Route('get', '/greet', greetSpec, function greet() {}));
+
+    const response = await createClientForHandler(server.requestHandler).get(
+      '/openapi.json',
+    );
+    expect(response.body).to.containDeep({
+      openapi: '3.0.0',
+      info: {
+        title: 'LoopBack Application',
+        version: '1.0.0',
+      },
+      paths: {
+        '/greet': {
+          get: {
+            responses: {
+              '200': {
+                content: {
+                  'text/plain': {
+                    schema: {type: 'string'},
+                  },
+                },
+                description: 'greeting of the day',
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(response.body.servers[0].url).to.match(/http:\/\/127.0.0.1\:\d+/);
     expect(response.get('Access-Control-Allow-Origin')).to.equal('*');
     expect(response.get('Access-Control-Allow-Credentials')).to.equal('true');
   });
@@ -189,11 +308,12 @@ paths:
             'text/plain':
               schema:
                 type: string
-servers:
-  - url: /
     `);
     // Use json for comparison to tolerate textual diffs
-    expect(yaml.safeLoad(response.text)).to.eql(expected);
+    const json = yaml.safeLoad(response.text);
+    expect(json).to.containDeep(expected);
+    expect(json.servers[0].url).to.match('/');
+
     expect(response.get('Access-Control-Allow-Origin')).to.equal('*');
     expect(response.get('Access-Control-Allow-Credentials')).to.equal('true');
   });
@@ -256,12 +376,14 @@ servers:
     expect(response.get('Location')).match(expectedUrl);
   });
 
-  it('exposes "GET /swagger-ui" endpoint with apiExplorerUrl', async () => {
-    const app = new Application({
-      rest: {apiExplorerUrl: 'http://petstore.swagger.io'},
+  it('exposes "GET /swagger-ui" endpoint with apiExplorer options', async () => {
+    const server = await givenAServer({
+      rest: {
+        apiExplorer: {
+          explorerUrl: 'http://petstore.swagger.io',
+        },
+      },
     });
-    app.component(RestComponent);
-    const server = await app.getServer(RestServer);
     const greetSpec = {
       responses: {
         200: {
@@ -369,7 +491,7 @@ servers:
     await server.stop();
   });
 
-  async function givenAServer(options?: ApplicationConfig) {
+  async function givenAServer(options?: {rest: RestComponentConfig}) {
     const app = new Application(options);
     app.component(RestComponent);
     return await app.getServer(RestServer);

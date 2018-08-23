@@ -52,16 +52,35 @@ Application options.
 const app = new RestApplication({
   rest: {
     port: 3001,
+
+    // Optional configuration for API explorer and spec
+    apiExplorer: {
+      // URL for the hosted API Explorer UI
+      // default to https://loopback.io/api-explorer
+      explorerUrl: 'http://petstore.swagger.io',
+      // Set `servers` based on HTTP request headers, default to `false`
+      setServersFromRequest: false,
+      // Template the OpenAPI spec, which will be filled with `paths` from
+      // controllers.
+      openApiSpec: {
+        info: {
+          title: 'My Application',
+          version: '1.0.0',
+        },
+        servers: [{url: 'http://127.0.0.1:8080'}],
+      },
+    },
   },
 });
 ```
 
 ### `rest` options
 
-| Property | Type            | Purpose                                                                                                   |
-| -------- | --------------- | --------------------------------------------------------------------------------------------------------- |
-| port     | number          | Specify the port on which the RestServer will listen for traffic.                                         |
-| sequence | SequenceHandler | Use a custom SequenceHandler to change the behavior of the RestServer for the request-response lifecycle. |
+| Property    | Type               | Purpose                                                                                                   |
+| ----------- | ------------------ | --------------------------------------------------------------------------------------------------------- |
+| port        | number             | Specify the port on which the RestServer will listen for traffic.                                         |
+| sequence    | SequenceHandler    | Use a custom SequenceHandler to change the behavior of the RestServer for the request-response lifecycle. |
+| apiExplorer | ApiExplorerOptions | Custom how API explorer and OpenAPI spec is served                                                        |
 
 ## Contributions
 
