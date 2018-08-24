@@ -7,18 +7,14 @@ import {LogError, Reject, HandlerContext} from '../types';
 import {inject, Provider} from '@loopback/context';
 import {HttpError} from 'http-errors';
 import {RestBindings} from '../keys';
-import * as errorHandler from 'strong-error-handler';
-
-export const defaultErrorHandlerOptions: errorHandler.ErrorHandlerOptions = {
-  log: false,
-};
+import {writeErrorToResponse, ErrorWriterOptions} from 'strong-error-handler';
 
 export class RejectProvider implements Provider<Reject> {
   constructor(
     @inject(RestBindings.SequenceActions.LOG_ERROR)
     protected logError: LogError,
-    @inject(RestBindings.ERROR_HANDLER_OPTIONS)
-    protected errorHandlerOptions?: errorHandler.ErrorHandlerOptions,
+    @inject(RestBindings.ERROR_WRITER_OPTIONS, {optional: true})
+    protected errorHandlerOptions?: ErrorWriterOptions,
   ) {}
 
   value(): Reject {
@@ -28,12 +24,7 @@ export class RejectProvider implements Provider<Reject> {
   action({request, response}: HandlerContext, error: Error) {
     const err = <HttpError>error;
     const statusCode = err.statusCode || err.status || 500;
-    errorHandler.writeErrorToResponse(
-      err,
-      request,
-      response,
-      this.errorHandlerOptions, // log option is intentionally not honoured here
-    );
+    writeErrorToResponse(err, request, response, this.errorHandlerOptions);
     this.logError(error, statusCode, request);
   }
 }

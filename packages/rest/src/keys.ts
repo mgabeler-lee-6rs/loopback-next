@@ -67,8 +67,8 @@ export namespace RestBindings {
    * Binding key for setting and injecting Reject action's error handling
    * options
    */
-  export const ERROR_HANDLER_OPTIONS = BindingKey.create<ErrorHandlerOptions>(
-    'rest.sequence.actions.reject.options',
+  export const ERROR_WRITER_OPTIONS = BindingKey.create<ErrorHandlerOptions>(
+    'rest.errorWriterOptions',
   );
 
   /**

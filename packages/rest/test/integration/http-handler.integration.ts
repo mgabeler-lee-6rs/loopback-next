@@ -12,7 +12,6 @@ import {
   FindRouteProvider,
   InvokeMethodProvider,
   RejectProvider,
-  defaultErrorHandlerOptions,
 } from '../..';
 import {ControllerSpec, get} from '@loopback/openapi-v3';
 import {Context} from '@loopback/context';
@@ -440,7 +439,7 @@ describe('HttpHandler', () => {
     });
 
     it('respects error handler options', async () => {
-      rootContext.bind(RestBindings.ERROR_HANDLER_OPTIONS).to({debug: true});
+      rootContext.bind(RestBindings.ERROR_WRITER_OPTIONS).to({debug: true});
 
       const spec = anOpenApiSpec()
         .withOperation(
@@ -482,9 +481,6 @@ describe('HttpHandler', () => {
       .to(createUnexpectedHttpErrorLogger());
     rootContext.bind(SequenceActions.SEND).to(writeResultToResponse);
     rootContext.bind(SequenceActions.REJECT).toProvider(RejectProvider);
-    rootContext
-      .bind(RestBindings.ERROR_HANDLER_OPTIONS)
-      .to(defaultErrorHandlerOptions);
 
     rootContext.bind(RestBindings.SEQUENCE).toClass(DefaultSequence);
 

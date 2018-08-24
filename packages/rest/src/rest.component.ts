@@ -21,7 +21,6 @@ import {
   RejectProvider,
   ParseParamsProvider,
   SendProvider,
-  defaultErrorHandlerOptions,
 } from './providers';
 import {RestServer, RestServerConfig} from './rest.server';
 import {DefaultSequence} from './sequence';
@@ -49,7 +48,6 @@ export class RestComponent implements Component {
     @inject(RestBindings.CONFIG) config?: RestComponentConfig,
   ) {
     app.bind(RestBindings.SEQUENCE).toClass(DefaultSequence);
-    app.bind(RestBindings.ERROR_HANDLER_OPTIONS).to(defaultErrorHandlerOptions);
     app.bind(RestBindings.API_SPEC).to(createEmptyApiSpec());
   }
 }
