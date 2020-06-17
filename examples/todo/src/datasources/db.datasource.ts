@@ -23,4 +23,9 @@ export class DbDataSource extends juggler.DataSource {
   ) {
     super(dsConfig);
   }
+
+  // pretend this is a real database like PostgreSQL
+  isRelational() {
+    return true;
+  }
 }

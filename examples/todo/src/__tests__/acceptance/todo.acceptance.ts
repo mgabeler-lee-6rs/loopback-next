@@ -222,6 +222,30 @@ describe('TodoApplication', () => {
     expect(response.body).to.have.length(2);
   });
 
+  context('issue 5764', function () {
+    it('stores null without errors', async function () {
+      const todo = givenTodo({tag: null});
+      const response = await client.post('/todos').send(todo).expect(200);
+      expect(response.body).to.containDeep(todo);
+      const result = await todoRepo.findById(response.body.id);
+      // this is passing because the entity load is doing JSON.parse in
+      // ModelBaseClass._initProperties, the wrong data was stored in the
+      // datasource. Not sure if this happens with the PostgreSQL connector,
+      // but either way it's masking wrong data being stored.
+      expect(result).to.containDeep(todo);
+    });
+
+    it('stores null so it can be found as null', async function () {
+      const todo = givenTodo({tag: null});
+      const response = await client.post('/todos').send(todo).expect(200);
+      const result = await todoRepo.find({
+        where: {id: response.body.id, tag: null},
+      });
+      expect(result).to.have.length(1);
+      expect(result[0]).to.have.property('tag').equal(null);
+    });
+  });
+
   /*
    ============================================================================
    TEST HELPERS
